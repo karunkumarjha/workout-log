@@ -192,8 +192,7 @@ export async function routinesList(el, ctx) {
         }, GRIP_ICON);
         if (grip) grip.addEventListener('pointerdown', (e) => startDrag(e, grip, i));
         const info = h('a', { class: 'routine-info', href: `#/routine/${r.id}`, 'aria-label': `Edit ${r.name}. Long press to delete.` },
-          h('h3', {}, r.name),
-          h('p', { class: 'muted small' }, r.exercises.map((e) => e.name).join(' · ') || 'No exercises'));
+          h('h3', {}, r.name));
         onLongPress(info, () => remove(r));
         return h('li', { class: `card routine-card${canReorder ? ' has-handle' : ''}` },
           grip,
