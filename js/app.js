@@ -23,7 +23,8 @@ const TABS = [
 const ROUTES = [
   [/^#\/routines$/, routinesList, '#/routines'],
   [/^#\/routine\/([\w-]+)$/, routineEditor, '#/routines'],
-  [/^#\/import\/([A-Za-z0-9_-]+)$/, importView, '#/routines'],
+  // No trailing $: tolerate text glued onto shared links; decodeRoutine trims it.
+  [/^#\/import\/([A-Za-z0-9_-]+)/, importView, '#/routines'],
   [/^#\/workout\/([\w-]+)$/, workoutView, '#/routines'],
   [/^#\/history$/, historyView, '#/history'],
   [/^#\/progress(?:\/(.+))?$/, progressView, '#/progress'],

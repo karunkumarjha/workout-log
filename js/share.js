@@ -22,10 +22,26 @@ export function routineLink(routine) {
   return `${base}#/import/${toBase64Url(JSON.stringify(payload))}`;
 }
 
+// Messaging apps sometimes glue words onto the end of a link ("...l19Here's"). Only the exact
+// original code decodes to valid JSON, so peel trailing characters until one parses.
+const MAX_TRAILING_JUNK = 120;
+
+function parsePayload(code) {
+  const clean = code.match(/^[A-Za-z0-9_-]*/)[0];
+  for (let len = clean.length; len > 0 && len >= clean.length - MAX_TRAILING_JUNK; len--) {
+    try {
+      return JSON.parse(fromBase64Url(clean.slice(0, len)));
+    } catch {
+      // keep trimming
+    }
+  }
+  return null;
+}
+
 // Returns { name, exercises: [string] } or null if the code is not a valid routine.
 export function decodeRoutine(code) {
   try {
-    const d = JSON.parse(fromBase64Url(code));
+    const d = parsePayload(code);
     if (d?.v !== 1 || typeof d.n !== 'string' || !Array.isArray(d.e)) return null;
     const name = d.n.trim().slice(0, MAX_NAME);
     const exercises = d.e
@@ -51,7 +67,8 @@ export async function shareRoutine(routine) {
   const url = routineLink(routine);
   if (navigator.share) {
     try {
-      await navigator.share({ title: routine.name, text: `Here's my "${routine.name}" routine for Workout Log:`, url });
+      // URL only: with extra text, some apps (WhatsApp) glue the text onto the link and break it.
+      await navigator.share({ title: routine.name, url });
       return;
     } catch (err) {
       if (err.name === 'AbortError') return;
