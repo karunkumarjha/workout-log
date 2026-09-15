@@ -1,6 +1,6 @@
 import { h, segmented } from '../ui.js';
-import { fmtDate, finishedSessions, exerciseNames, seriesFor, METRICS } from '../data.js';
-import { fmtNumber, fmtSets, fromKg } from '../units.js';
+import { exKey, fmtDate, finishedSessions, exerciseNames, seriesFor, METRICS } from '../data.js';
+import { fmtNumber, fmtSets, fromKg, unitLabel } from '../units.js';
 import { lineChart } from '../chart.js';
 
 let metric = 'weight';
@@ -11,7 +11,6 @@ const stat = (label, value) => h('div', { class: 'card stat' },
 
 export async function progressView(el, ctx, key) {
   const { profile } = ctx;
-  const { unit } = profile;
   const sessions = await finishedSessions(profile.id);
   const names = exerciseNames(sessions); // most recently done first
 
@@ -23,6 +22,8 @@ export async function progressView(el, ctx, key) {
     return;
   }
   if (!key || !names.has(key)) key = names.keys().next().value;
+  // Show the exercise in the unit it was most recently logged in (sessions are newest first).
+  const unit = sessions.flatMap((s) => s.entries).find((e) => exKey(e.exercise) === key)?.unit ?? 'kg';
 
   const select = h('select', {
     class: 'input input-lg', 'aria-label': 'Exercise', value: key,
@@ -35,7 +36,7 @@ export async function progressView(el, ctx, key) {
     const m = METRICS[metric];
     const isWeight = m.kind === 'weight';
     const display = (v) => (isWeight ? fromKg(v, unit) : v);
-    const fmt = (v) => (isWeight ? `${fmtNumber(v)} ${unit}` : fmtNumber(v));
+    const fmt = (v) => (isWeight ? `${fmtNumber(v)} ${unitLabel(unit)}` : fmtNumber(v));
     const points = seriesFor(sessions, key, metric);
     const values = points.map((p) => display(p.value));
     const latest = values.at(-1);

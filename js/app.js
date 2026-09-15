@@ -1,5 +1,5 @@
 import * as db from './db.js';
-import { h, openDialog, segmented } from './ui.js';
+import { h, openDialog } from './ui.js';
 import { uid, routinesFor } from './data.js';
 import { routinesList, routineEditor } from './views/routines.js';
 import { workoutView } from './views/workout.js';
@@ -109,7 +109,6 @@ function renderTabs(active) {
 }
 
 function onboarding() {
-  let unit = 'kg';
   const input = h('input', { class: 'input input-lg', placeholder: 'Your name', 'aria-label': 'Your name', required: true, autocomplete: 'off' });
   return h('div', { class: 'view onboarding' },
     h('h1', {}, 'Workout Log'),
@@ -119,12 +118,10 @@ function onboarding() {
       onsubmit: async (e) => {
         e.preventDefault();
         const name = input.value.trim();
-        if (name) await createProfile(name, unit);
+        if (name) await createProfile(name, 'kg');
       },
     },
     input,
-    h('div', { class: 'setting-row' }, h('span', { class: 'setting-label' }, 'Weight unit'),
-      segmented([['kg', 'kg'], ['lb', 'lb']], unit, (v) => { unit = v; }, 'Weight unit')),
     h('button', { class: 'btn btn-primary btn-block' }, 'Create profile')));
 }
 

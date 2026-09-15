@@ -1,7 +1,7 @@
 import * as db from '../db.js';
-import { h, confirmDialog, openDialog, promptDialog, toast } from '../ui.js';
+import { h, confirmDialog, openDialog, promptDialog, segmented, toast } from '../ui.js';
 import { exKey, fmtDate, todayISO, getSession, finishedSessions, lastByExercise, exerciseNames, routinesFor, newEntry, DEFAULT_REPS } from '../data.js';
-import { fmtSets, fromKg, toKg, round1, weightStep } from '../units.js';
+import { fmtSets, fromKg, toKg, round1, weightStep, unitLabel } from '../units.js';
 
 function stepper({ label, value, step, onchange }) {
   const input = h('input', {
@@ -27,9 +27,10 @@ function stepper({ label, value, step, onchange }) {
     h('button', { type: 'button', class: 'step-btn', 'aria-label': `More: ${label}`, onclick: () => bump(step) }, '+'));
 }
 
+const hasWeight = (s) => s.weightKg > 0;
+
 export async function workoutView(el, ctx, id) {
   const { profile } = ctx;
-  const { unit } = profile;
   const session = await getSession(id);
   if (!session || session.profileId !== profile.id) return ctx.go('#/routines');
 
@@ -50,25 +51,52 @@ export async function workoutView(el, ctx, id) {
       : `${sets.filter((s) => s.done).length} of ${sets.length} sets done`;
   };
 
+  // Highlight sets whose weight is still 0 and bring the first into view.
+  const rowFor = new WeakMap();
+  const flagMissing = (sets) => {
+    let first = null;
+    for (const s of sets) {
+      const row = rowFor.get(s);
+      if (!row) continue;
+      row.classList.add('invalid');
+      first ??= row;
+    }
+    first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast(sets.length === 1
+      ? 'Enter a weight above 0 for the highlighted set'
+      : `Enter a weight above 0 for the ${sets.length} highlighted sets`);
+  };
+
   const list = h('div', { class: 'ex-list' });
 
   const card = (e) => {
     const prev = last.get(exKey(e.exercise));
+    const setHead = h('div', { class: 'set-head', 'aria-hidden': 'true' });
     const rows = h('div', { class: 'set-rows' });
     const actions = h('div', { class: 'set-actions' });
 
     const setRow = (s, i) => {
+      const { unit } = e;
       const row = h('div', { class: `set-row${s.done && !finished ? ' done' : ''}` },
         h('span', { class: 'set-num' }, i + 1),
         stepper({ label: `${e.exercise} set ${i + 1} reps`, value: s.reps, step: 1, onchange: (v) => { s.reps = v; save(); } }),
         stepper({
-          label: `${e.exercise} set ${i + 1} weight (${unit})`, value: round1(fromKg(s.weightKg, unit)), step: weightStep(unit),
-          onchange: (v) => { s.weightKg = toKg(v, unit); save(); },
+          label: `${e.exercise} set ${i + 1} weight (${unitLabel(unit)})`, value: round1(fromKg(s.weightKg, unit)), step: weightStep(unit),
+          onchange: (v) => {
+            s.weightKg = toKg(v, unit);
+            if (hasWeight(s)) row.classList.remove('invalid');
+            save();
+          },
         }));
+      rowFor.set(s, row);
       if (!finished) {
         const check = h('button', {
           class: 'set-check', 'aria-label': `${e.exercise} set ${i + 1} done`, 'aria-pressed': String(Boolean(s.done)),
           onclick: () => {
+            if (!s.done && !hasWeight(s)) {
+              flagMissing([s]);
+              return;
+            }
             s.done = !s.done;
             row.classList.toggle('done', s.done);
             check.setAttribute('aria-pressed', String(s.done));
@@ -82,6 +110,9 @@ export async function workoutView(el, ctx, id) {
     };
 
     const drawSets = () => {
+      setHead.replaceChildren(...[
+        h('span', {}, 'Set'), h('span', {}, 'Reps'), h('span', {}, `Weight (${unitLabel(e.unit)})`), !finished && h('span', {}),
+      ].filter(Boolean));
       rows.replaceChildren(...e.sets.map(setRow));
       actions.replaceChildren(
         h('button', {
@@ -106,11 +137,20 @@ export async function workoutView(el, ctx, id) {
     };
     drawSets();
 
+    // Switching unit keeps the numbers as typed (a "25" dumbbell stays 25) and changes what they mean.
+    const unitToggle = segmented([['kg', 'kg'], ['lb', 'lbs']], e.unit, (next) => {
+      for (const s of e.sets) s.weightKg = toKg(round1(fromKg(s.weightKg, e.unit)), next);
+      e.unit = next;
+      drawSets();
+      save();
+    }, `${e.exercise} weight unit`);
+    unitToggle.classList.add('unit-toggle');
+
     return h('section', { class: `card ex-card${finished ? ' finished' : ''}` },
       h('div', { class: 'ex-card-head' },
-        h('div', {},
-          h('h3', {}, e.exercise),
-          h('p', { class: 'muted small' }, prev ? `Last (${fmtDate(prev.date)}): ${fmtSets(prev.sets, unit)}` : 'First time logging this')),
+        h('div', { class: 'ex-title' },
+          h('div', { class: 'ex-name-row' }, h('h3', {}, e.exercise), unitToggle),
+          h('p', { class: 'muted small' }, prev ? `Last (${fmtDate(prev.date)}): ${fmtSets(prev.sets, prev.unit)}` : 'First time logging this')),
         h('button', {
           class: 'icon-btn', 'aria-label': `Remove ${e.exercise}`,
           onclick: async () => {
@@ -121,8 +161,7 @@ export async function workoutView(el, ctx, id) {
             draw();
           },
         }, '✕')),
-      h('div', { class: 'set-head', 'aria-hidden': 'true' },
-        h('span', {}, 'Set'), h('span', {}, 'Reps'), h('span', {}, `Weight (${unit})`), !finished && h('span', {})),
+      setHead,
       rows,
       actions);
   };
@@ -151,6 +190,7 @@ export async function workoutView(el, ctx, id) {
       return;
     }
     const done = sets.filter((s) => s.done).length;
+    let onlyDone = false;
     if (done < sets.length) {
       const left = sets.length - done;
       const choice = await openDialog({
@@ -163,17 +203,33 @@ export async function workoutView(el, ctx, id) {
         cancelText: 'Keep going',
       });
       if (!choice) return;
-      if (choice === 'ok') {
-        sets.forEach((s) => { s.done = true; });
-      } else {
-        session.entries = session.entries
-          .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) }))
-          .filter((e) => e.sets.length);
-      }
+      onlyDone = choice === 'done';
+    }
+    const missing = (onlyDone ? sets.filter((s) => s.done) : sets).filter((s) => !hasWeight(s));
+    if (missing.length) {
+      flagMissing(missing);
+      return;
+    }
+    if (onlyDone) {
+      session.entries = session.entries
+        .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) }))
+        .filter((e) => e.sets.length);
+    } else {
+      sets.forEach((s) => { s.done = true; });
     }
     session.finishedAt = Date.now();
     await save();
     toast('Workout saved 💪');
+    ctx.go('#/history');
+  };
+
+  const doneEditing = () => {
+    const missing = session.entries.flatMap((e) => e.sets).filter((s) => !hasWeight(s));
+    if (missing.length) {
+      flagMissing(missing);
+      return;
+    }
+    toast('Changes saved');
     ctx.go('#/history');
   };
 
@@ -213,7 +269,7 @@ export async function workoutView(el, ctx, id) {
     h('div', { class: 'footer-actions' },
       h('button', { class: 'btn btn-danger-ghost', onclick: discard }, finished ? 'Delete' : 'Discard'),
       finished
-        ? h('button', { class: 'btn btn-primary', onclick: () => { toast('Changes saved'); ctx.go('#/history'); } }, 'Done')
+        ? h('button', { class: 'btn btn-primary', onclick: doneEditing }, 'Done')
         : h('button', { class: 'btn btn-primary', onclick: finish }, 'Finish workout')),
   ].filter(Boolean));
 }

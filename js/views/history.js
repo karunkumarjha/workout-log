@@ -34,7 +34,7 @@ export async function historyView(el, ctx) {
         h('span', { class: 'day' }, fmtDate(s.date, { day: 'numeric' }))),
       h('div', { class: 'history-body' },
         h('h3', {}, s.routineName),
-        h('p', { class: 'muted small' }, `${fmtDate(s.date)} · ${n} exercise${n === 1 ? '' : 's'}${volume ? ` · ${fmtWeight(volume, profile.unit)} lifted` : ''}`),
+        h('p', { class: 'muted small' }, `${fmtDate(s.date)} · ${n} exercise${n === 1 ? '' : 's'}${volume ? ` · ${fmtWeight(volume, 'kg')} lifted` : ''}`),
         h('p', { class: 'muted small ellipsis' }, s.entries.map((e) => e.exercise).join(', '))),
       h('span', { class: 'chev', 'aria-hidden': 'true' }, '›')));
   }

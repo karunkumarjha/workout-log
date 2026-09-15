@@ -7,7 +7,8 @@ export const uid = () =>
 export const exKey = (name) => name.trim().toLowerCase().replace(/\s+/g, ' ');
 
 export const DEFAULT_SETS = 3;
-export const DEFAULT_REPS = 8;
+export const DEFAULT_REPS = 12;
+export const DEFAULT_UNIT = 'kg';
 
 export function todayISO(d = new Date()) {
   const z = (n) => String(n).padStart(2, '0');
@@ -24,12 +25,14 @@ export const fmtDate = (s, opts = { weekday: 'short', day: 'numeric', month: 'sh
 
 // Entry shape: { id, exercise, sets: [{ reps, weightKg, done }] }.
 // Older entries stored one sets/reps/weightKg for the whole exercise; expand them.
+// Each entry also carries the unit its weights are shown in (per exercise; stored weights stay in kg).
 export function normalizeEntry(e) {
-  if (Array.isArray(e.sets)) return e;
+  if (Array.isArray(e.sets)) return e.unit ? e : { ...e, unit: DEFAULT_UNIT };
   const count = Math.max(1, Math.round(e.sets) || DEFAULT_SETS);
   return {
     id: e.id ?? uid(),
     exercise: e.exercise,
+    unit: DEFAULT_UNIT,
     sets: Array.from({ length: count }, () => ({ reps: e.reps ?? DEFAULT_REPS, weightKg: e.weightKg ?? 0, done: Boolean(e.done) })),
   };
 }
@@ -89,6 +92,7 @@ export function newEntry(name, last) {
   return {
     id: uid(),
     exercise: name.trim(),
+    unit: last?.unit ?? DEFAULT_UNIT,
     sets: Array.from({ length: count }, (_, i) => {
       const prev = last?.sets[i] ?? last?.sets.at(-1);
       return { reps: prev?.reps ?? DEFAULT_REPS, weightKg: prev?.weightKg ?? 0, done: false };

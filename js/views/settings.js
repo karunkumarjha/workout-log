@@ -1,5 +1,5 @@
 import * as db from '../db.js';
-import { h, confirmDialog, promptDialog, segmented, toast } from '../ui.js';
+import { h, confirmDialog, promptDialog, toast } from '../ui.js';
 import { exportBackup, readBackupFile } from '../backup.js';
 
 export async function settingsView(el, ctx) {
@@ -16,12 +16,6 @@ export async function settingsView(el, ctx) {
     const name = await promptDialog({ title: 'Rename profile', label: 'Name', value: profile.name, okText: 'Save' });
     if (!name) return;
     await db.put('profiles', { ...profile, name });
-    await ctx.refresh();
-  };
-
-  const setUnit = async (unit) => {
-    await db.put('profiles', { ...profile, unit });
-    toast(`Showing weights in ${unit}`);
     await ctx.refresh();
   };
 
@@ -69,9 +63,6 @@ export async function settingsView(el, ctx) {
           h('div', { class: 'setting-label' }, profile.name),
           h('div', { class: 'muted small' }, `${routines.length} routine${routines.length === 1 ? '' : 's'} · ${workouts} workout${workouts === 1 ? '' : 's'}`)),
         h('button', { class: 'btn', onclick: rename }, 'Rename')),
-      h('div', { class: 'setting-row' },
-        h('div', { class: 'setting-label' }, 'Weight unit'),
-        segmented([['kg', 'kg'], ['lb', 'lb']], profile.unit, setUnit, 'Weight unit')),
       h('button', { class: 'btn btn-danger-ghost btn-block', onclick: remove }, 'Delete this profile')),
     h('section', { class: 'card stack' },
       h('h2', { class: 'card-title' }, 'Backup'),

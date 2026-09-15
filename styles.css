@@ -321,6 +321,15 @@ select.input { appearance: auto; }
 .set-num { text-align: center; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
 .set-row.done .set-num { color: var(--good); }
 .set-row.done .stepper-row { background: var(--good-soft); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+.ex-title { min-width: 0; }
+.ex-name-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.unit-toggle { padding: 2px; border-radius: 9px; }
+.unit-toggle button { flex: none; min-height: 28px; padding: 0 10px; border-radius: 7px; font-size: 0.8rem; }
+/* Weight stepper (2nd stepper in the row) is outlined when a logged set still has 0 weight. */
+.set-row.invalid > .stepper-row:nth-of-type(2) {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
 .set-check {
   width: 46px;
   height: 48px;
