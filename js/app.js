@@ -1,6 +1,6 @@
 import * as db from './db.js';
-import { h, promptDialog, segmented } from './ui.js';
-import { uid } from './data.js';
+import { h, openDialog, segmented } from './ui.js';
+import { uid, routinesFor } from './data.js';
 import { routinesList, routineEditor } from './views/routines.js';
 import { workoutView } from './views/workout.js';
 import { historyView } from './views/history.js';
@@ -47,14 +47,35 @@ const ctx = {
     await ctx.refresh();
   },
   async addProfile() {
-    const name = await promptDialog({ title: 'New profile', label: 'Name', okText: 'Create' });
-    if (name) await createProfile(name, ctx.profile?.unit ?? 'kg');
+    const source = ctx.profile;
+    const routines = source ? await routinesFor(source.id) : [];
+    const input = h('input', { class: 'input', placeholder: 'Name', 'aria-label': 'Name', required: true, autocomplete: 'off' });
+    const copy = h('input', { type: 'checkbox', class: 'checkbox' });
+    const body = h('div', { class: 'dialog-body stack' },
+      input,
+      routines.length > 0 && h('label', { class: 'check-row' },
+        copy,
+        h('span', {}, `Copy ${source.name}'s routines (${routines.length})`)));
+    const result = openDialog({ title: 'New profile', body, okText: 'Create' });
+    input.focus();
+    if ((await result) !== 'ok') return;
+    const name = input.value.trim();
+    if (name) await createProfile(name, source?.unit ?? 'kg', copy.checked ? routines : []);
   },
 };
 
-async function createProfile(name, unit) {
+// Copied routines get new ids and keep their order; workout history is never copied.
+async function createProfile(name, unit, routinesToCopy = []) {
   const profile = { id: uid(), name, unit, createdAt: Date.now() };
   await db.put('profiles', profile);
+  await Promise.all(routinesToCopy.map((r, i) => db.put('routines', {
+    id: uid(),
+    profileId: profile.id,
+    name: r.name,
+    exercises: r.exercises.map((e) => ({ name: e.name })),
+    order: i,
+    createdAt: Date.now(),
+  })));
   await ctx.switchProfile(profile.id);
 }
 

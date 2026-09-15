@@ -19,7 +19,51 @@ const shareButton = (routine) => iconButton({
   disabled: !routine.exercises.length, onclick: () => shareRoutine(routine),
 }, SHARE_ICON);
 
+const IMPORT_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M8 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2"/></svg>';
+const PLUS_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+
 const LIST_GAP = 10; // keep in sync with .list gap in styles.css
+const LONG_PRESS_MS = 500;
+
+// Hold still for LONG_PRESS_MS (or right-click) to trigger; the click that ends a long press is swallowed.
+function onLongPress(el, callback) {
+  let timer = null;
+  let fired = false;
+  let startX = 0;
+  let startY = 0;
+  const cancel = () => {
+    clearTimeout(timer);
+    timer = null;
+  };
+  const fire = () => {
+    cancel();
+    fired = true;
+    navigator.vibrate?.(15);
+    callback();
+  };
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    fired = false;
+    startX = e.clientX;
+    startY = e.clientY;
+    cancel();
+    timer = setTimeout(fire, LONG_PRESS_MS);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (timer && Math.hypot(e.clientX - startX, e.clientY - startY) > 10) cancel();
+  });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(type, cancel);
+  el.addEventListener('click', (e) => {
+    if (fired) {
+      e.preventDefault();
+      fired = false;
+    }
+  });
+  el.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (!fired) fire();
+  });
+}
 
 export function activeBanner(session) {
   const sets = session.entries.flatMap((e) => e.sets);
@@ -53,6 +97,27 @@ export async function routinesList(el, ctx) {
   };
 
   const listWrap = h('div');
+
+  const remove = async (routine) => {
+    const ok = await confirmDialog({
+      title: `Delete "${routine.name}"?`,
+      message: 'Workouts you already logged with this routine stay in your history.',
+      okText: 'Delete', okClass: 'btn-danger',
+    });
+    if (!ok) return;
+    await db.del('routines', routine.id);
+    routines.splice(routines.indexOf(routine), 1);
+    toast('Routine deleted');
+    draw();
+  };
+
+  const importShared = async () => {
+    const text = await promptDialog({ title: 'Import a shared routine', label: 'Paste the link', okText: 'Continue' });
+    if (!text) return;
+    const code = extractCode(text);
+    if (code) ctx.go(`#/import/${code}`);
+    else toast('That doesn\'t look like a routine link');
+  };
 
   const moveTo = async (from, to) => {
     const [r] = routines.splice(from, 1);
@@ -126,11 +191,13 @@ export async function routinesList(el, ctx) {
           },
         }, GRIP_ICON);
         if (grip) grip.addEventListener('pointerdown', (e) => startDrag(e, grip, i));
+        const info = h('a', { class: 'routine-info', href: `#/routine/${r.id}`, 'aria-label': `Edit ${r.name}. Long press to delete.` },
+          h('h3', {}, r.name),
+          h('p', { class: 'muted small' }, r.exercises.map((e) => e.name).join(' · ') || 'No exercises'));
+        onLongPress(info, () => remove(r));
         return h('li', { class: `card routine-card${canReorder ? ' has-handle' : ''}` },
           grip,
-          h('a', { class: 'routine-info', href: `#/routine/${r.id}`, 'aria-label': `Edit ${r.name}` },
-            h('h3', {}, r.name),
-            h('p', { class: 'muted small' }, r.exercises.map((e) => e.name).join(' · ') || 'No exercises')),
+          info,
           h('div', { class: 'routine-actions' },
             shareButton(r),
             iconButton({
@@ -143,20 +210,11 @@ export async function routinesList(el, ctx) {
 
   el.append(...[
     h('div', { class: 'view-head' }, h('h1', {}, 'Routines'),
-      h('a', { class: 'btn btn-primary', href: '#/routine/new' }, '+ New')),
+      h('div', { class: 'head-actions' },
+        iconButton({ class: 'btn btn-icon', 'aria-label': 'Import a shared routine', title: 'Import a shared routine', onclick: importShared }, IMPORT_ICON),
+        Object.assign(h('a', { class: 'btn btn-primary btn-icon', href: '#/routine/new', 'aria-label': 'New routine', title: 'New routine' }), { innerHTML: PLUS_ICON }))),
     active && activeBanner(active),
     listWrap,
-    h('button', { class: 'btn btn-ghost btn-block', onclick: () => start(null) }, 'Start an empty workout'),
-    h('button', {
-      class: 'btn btn-ghost btn-block',
-      onclick: async () => {
-        const text = await promptDialog({ title: 'Import a shared routine', label: 'Paste the link', okText: 'Continue' });
-        if (!text) return;
-        const code = extractCode(text);
-        if (code) ctx.go(`#/import/${code}`);
-        else toast('That doesn\'t look like a routine link');
-      },
-    }, 'Import a shared routine'),
   ].filter(Boolean));
 }
 

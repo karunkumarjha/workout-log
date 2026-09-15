@@ -6,7 +6,8 @@ An offline workout tracker for your phone. No account, no server, no internet ne
 - **Routines:** a name and a list of exercise names.
 - **Workouts:** start a routine and each exercise gets 3 sets by default. Every set has its own reps and weight, and you can add or remove sets. Values carry over set-by-set from last time. Tick sets as you go; progress saves automatically.
 - **Progress:** pick an exercise to see heaviest set, volume, estimated 1RM or total reps over time.
-- **Sharing routines:** open a routine and tap Share to send a link. The routine is encoded in the link itself (after the `#`, which is never sent to a server). Opening the link shows a preview with an Import button. On iPhone, a link tapped in Messages opens in Safari, which keeps its data separate from the home-screen app, so use Routines → **Import a shared routine** and paste the link inside the app instead.
+- **Sharing routines:** open a routine and tap Share to send a link. The routine is encoded in the link itself (after the `#`, which is never sent to a server). Opening the link shows a preview with an Import button. On iPhone, a link tapped in Messages opens in Safari, which keeps its data separate from the home-screen app, so tap the import button (tray with a down arrow, top of Routines) and paste the link inside the app instead.
+- **Managing routines:** drag the ⠿ handle to reorder, long-press a routine to delete it. When adding a profile you can copy the current profile's routines (not its history).
 - **Backup:** Settings → Export/Import a JSON file.
 
 All data is stored in the browser's IndexedDB on the device. Plain HTML/CSS/JS with no build step and no dependencies.

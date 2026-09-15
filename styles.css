@@ -269,7 +269,11 @@ select.input { appearance: auto; }
 .shared-exercises { margin: 0; padding-left: 1.4em; color: var(--ink-2); }
 .shared-exercises li + li { margin-top: 4px; }
 .routine-card { display: flex; align-items: center; gap: 12px; }
-.routine-info { flex: 1; min-width: 0; text-decoration: none; }
+/* Long press deletes, so suppress the OS link preview / share menu and text selection. */
+.routine-info { flex: 1; min-width: 0; text-decoration: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.head-actions { display: flex; gap: 8px; }
+.check-row { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.checkbox { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
 .routine-actions { display: flex; flex: none; align-items: center; gap: 8px; }
 .routine-info p { margin-top: 4px; }
 .empty {
