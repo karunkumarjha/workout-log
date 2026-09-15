@@ -244,6 +244,8 @@ select.input { appearance: auto; }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .list.reordering .routine-card { border-style: dashed; }
 .head-actions { display: flex; gap: 8px; }
+.shared-exercises { margin: 0; padding-left: 1.4em; color: var(--ink-2); }
+.shared-exercises li + li { margin-top: 4px; }
 .routine-card { display: flex; align-items: center; gap: 12px; }
 .routine-info { flex: 1; min-width: 0; text-decoration: none; }
 .routine-info p { margin-top: 4px; }

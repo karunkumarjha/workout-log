@@ -6,6 +6,7 @@ import { workoutView } from './views/workout.js';
 import { historyView } from './views/history.js';
 import { progressView } from './views/progress.js';
 import { settingsView } from './views/settings.js';
+import { importView } from './views/import.js';
 
 const main = document.getElementById('main');
 const bar = document.getElementById('profile-bar');
@@ -22,6 +23,7 @@ const TABS = [
 const ROUTES = [
   [/^#\/routines$/, routinesList, '#/routines'],
   [/^#\/routine\/([\w-]+)$/, routineEditor, '#/routines'],
+  [/^#\/import\/([A-Za-z0-9_-]+)$/, importView, '#/routines'],
   [/^#\/workout\/([\w-]+)$/, workoutView, '#/routines'],
   [/^#\/history$/, historyView, '#/history'],
   [/^#\/progress(?:\/(.+))?$/, progressView, '#/progress'],

@@ -1,6 +1,7 @@
 import * as db from '../db.js';
-import { h, confirmDialog, openDialog, toast } from '../ui.js';
+import { h, confirmDialog, openDialog, promptDialog, toast } from '../ui.js';
 import { uid, routinesFor, activeSession, startSession, finishedSessions, exerciseNames } from '../data.js';
+import { extractCode, shareRoutine } from '../share.js';
 
 export function activeBanner(session) {
   const sets = session.entries.flatMap((e) => e.sets);
@@ -82,6 +83,16 @@ export async function routinesList(el, ctx) {
     active && activeBanner(active),
     listWrap,
     h('button', { class: 'btn btn-ghost btn-block', onclick: () => start(null) }, 'Start an empty workout'),
+    h('button', {
+      class: 'btn btn-ghost btn-block',
+      onclick: async () => {
+        const text = await promptDialog({ title: 'Import a shared routine', label: 'Paste the link', okText: 'Continue' });
+        if (!text) return;
+        const code = extractCode(text);
+        if (code) ctx.go(`#/import/${code}`);
+        else toast('That doesn\'t look like a routine link');
+      },
+    }, 'Import a shared routine'),
   ].filter(Boolean));
 }
 
@@ -177,6 +188,17 @@ export async function routineEditor(el, ctx, id) {
     h('datalist', { id: 'exercise-suggestions' }, suggestions.map((s) => h('option', { value: s }))),
     h('div', { class: 'footer-actions' },
       !isNew && h('button', { class: 'btn btn-danger-ghost', onclick: remove }, 'Delete'),
+      h('button', {
+        class: 'btn',
+        onclick: () => {
+          const exercises = routine.exercises.map((e) => ({ name: e.name.trim() })).filter((e) => e.name);
+          if (!routine.name.trim() || !exercises.length) {
+            toast('Add a name and at least one exercise to share');
+            return;
+          }
+          shareRoutine({ name: routine.name.trim(), exercises });
+        },
+      }, 'Share'),
       h('button', { class: 'btn btn-primary', onclick: save }, 'Save routine')),
   );
 }
