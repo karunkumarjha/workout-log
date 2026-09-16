@@ -8,6 +8,8 @@ export const exKey = (name) => name.trim().toLowerCase().replace(/\s+/g, ' ');
 
 export const DEFAULT_SETS = 3;
 export const DEFAULT_REPS = 12;
+// Reps for a first-time exercise: set 1, set 2, set 3 (later sets reuse the last value).
+export const DEFAULT_REP_SCHEME = [12, 10, 8];
 export const DEFAULT_UNIT = 'kg';
 
 export function todayISO(d = new Date()) {
@@ -95,7 +97,8 @@ export function newEntry(name, last) {
     unit: last?.unit ?? DEFAULT_UNIT,
     sets: Array.from({ length: count }, (_, i) => {
       const prev = last?.sets[i] ?? last?.sets.at(-1);
-      return { reps: prev?.reps ?? DEFAULT_REPS, weightKg: prev?.weightKg ?? 0, done: false };
+      const reps = prev?.reps ?? DEFAULT_REP_SCHEME[i] ?? DEFAULT_REP_SCHEME.at(-1);
+      return { reps, weightKg: prev?.weightKg ?? 0, done: false };
     }),
   };
 }

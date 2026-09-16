@@ -311,11 +311,11 @@ select.input { appearance: auto; }
 .ex-card-head p { margin-top: 2px; }
 .set-head, .set-row {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1.3fr) 46px;
+  grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1.15fr) 44px;
   gap: 6px;
   align-items: center;
 }
-.ex-card.finished .set-head, .ex-card.finished .set-row { grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1.3fr); }
+.ex-card.finished .set-head, .ex-card.finished .set-row { grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1.15fr); }
 .set-head { margin: 12px 0 4px; font-size: 0.75rem; color: var(--muted); font-weight: 500; text-align: center; }
 .set-rows { display: grid; gap: 6px; }
 .set-num { text-align: center; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -356,7 +356,7 @@ select.input { appearance: auto; }
 }
 .step-btn {
   flex: none;
-  width: 36px;
+  width: 32px;
   min-height: 48px;
   border: 0;
   background: transparent;
@@ -371,6 +371,7 @@ select.input { appearance: auto; }
   flex: 1;
   min-width: 0;
   width: 100%;
+  padding: 0 2px;
   border: 0;
   background: transparent;
   color: var(--ink);
