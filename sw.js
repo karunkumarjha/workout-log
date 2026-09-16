@@ -1,5 +1,5 @@
 // Offline support: serve from cache immediately, refresh the cache in the background.
-const CACHE = 'workout-log-v13';
+const CACHE = 'workout-log-v15';
 const FILES = [
   './',
   './index.html',
@@ -25,7 +25,11 @@ const FILES = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' bypasses the browser's HTTP cache, which can still hold the previous
+  // build (GitHub Pages serves max-age=600) and would otherwise be stored as the new version.
+  e.waitUntil(caches.open(CACHE)
+    .then((c) => c.addAll(FILES.map((url) => new Request(url, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {

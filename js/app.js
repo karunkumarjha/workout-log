@@ -164,7 +164,18 @@ async function render() {
 }
 
 async function boot() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) {
+    // A new service worker claims the page as soon as it installs; reload once so the
+    // update applies on this launch instead of the next one.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      reloading = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
   navigator.storage?.persist?.().catch(() => {});
   await loadProfiles();
   window.addEventListener('hashchange', render);

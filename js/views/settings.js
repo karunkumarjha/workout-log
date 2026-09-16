@@ -10,6 +10,9 @@ export async function settingsView(el, ctx) {
     navigator.storage?.persisted?.() ?? false,
   ]);
   const workouts = sessions.filter((s) => s.finishedAt).length;
+  // The offline cache is named workout-log-v<n>, so it tells us which build is actually running.
+  const cacheName = (await caches?.keys?.() ?? []).find((n) => n.startsWith('workout-log-v'));
+  const appVersion = cacheName?.replace('workout-log-', '') ?? 'dev';
   const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
   const rename = async () => {
@@ -76,6 +79,23 @@ export async function settingsView(el, ctx) {
       h('p', { class: 'muted small' }, installed
         ? 'Installed. The app works without internet.'
         : 'Install the app to use it offline: on iPhone, tap Share → Add to Home Screen. On Android, open the ⋮ menu → Install app.'),
+      h('div', { class: 'setting-row' },
+        h('div', {},
+          h('div', { class: 'setting-label' }, `Version ${appVersion}`),
+          h('div', { class: 'muted small' }, 'Updates install when you open the app online.')),
+        h('button', {
+          class: 'btn',
+          onclick: async () => {
+            const reg = await navigator.serviceWorker?.getRegistration();
+            if (!reg) {
+              toast('Offline mode not set up on this device');
+              return;
+            }
+            toast('Checking for updates…');
+            await reg.update();
+            setTimeout(() => location.reload(), 1500);
+          },
+        }, 'Check')),
       h('p', { class: 'muted small' }, persisted
         ? 'Storage is protected. The browser won\'t clear your data on its own.'
         : 'Storage isn\'t marked as protected yet. Installing the app helps keep your data safe.')),
