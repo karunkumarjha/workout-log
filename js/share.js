@@ -63,12 +63,13 @@ export function extractCode(text) {
   return /^[A-Za-z0-9_-]+$/.test(t) ? t : null;
 }
 
-export async function shareRoutine(routine) {
-  const url = routineLink(routine);
+export const appLink = () => location.href.split('#')[0];
+
+export async function shareLink(url, title) {
   if (navigator.share) {
     try {
       // URL only: with extra text, some apps (WhatsApp) glue the text onto the link and break it.
-      await navigator.share({ title: routine.name, url });
+      await navigator.share({ title, url });
       return;
     } catch (err) {
       if (err.name === 'AbortError') return;
@@ -84,3 +85,6 @@ export async function shareRoutine(routine) {
     await shown;
   }
 }
+
+export const shareRoutine = (routine) => shareLink(routineLink(routine), routine.name);
+export const shareApp = () => shareLink(appLink(), 'Workout Log');

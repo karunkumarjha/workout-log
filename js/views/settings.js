@@ -1,19 +1,15 @@
 import * as db from '../db.js';
 import { h, confirmDialog, promptDialog, toast } from '../ui.js';
 import { exportBackup, readBackupFile } from '../backup.js';
+import { shareApp } from '../share.js';
 
 export async function settingsView(el, ctx) {
   const { profile } = ctx;
-  const [routines, sessions, persisted] = await Promise.all([
+  const [routines, sessions] = await Promise.all([
     db.byProfile('routines', profile.id),
     db.byProfile('sessions', profile.id),
-    navigator.storage?.persisted?.() ?? false,
   ]);
   const workouts = sessions.filter((s) => s.finishedAt).length;
-  // The offline cache is named workout-log-v<n>, so it tells us which build is actually running.
-  const cacheName = (await caches?.keys?.() ?? []).find((n) => n.startsWith('workout-log-v'));
-  const appVersion = cacheName?.replace('workout-log-', '') ?? 'dev';
-  const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
   const rename = async () => {
     const name = await promptDialog({ title: 'Rename profile', label: 'Name', value: profile.name, okText: 'Save' });
@@ -58,6 +54,38 @@ export async function settingsView(el, ctx) {
     },
   });
 
+  // Throws away the offline copy and re-registers, so the next load comes from the server.
+  // Workouts live in IndexedDB and are untouched.
+  const update = async () => {
+    toast('Updating…');
+    try {
+      await Promise.all((await caches.keys()).map((k) => caches.delete(k)));
+      await (await navigator.serviceWorker?.getRegistration())?.unregister();
+    } catch {
+      // fall through to the reload either way
+    }
+    setTimeout(() => location.reload(), 600);
+  };
+
+  const checkForUpdates = async () => {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (!reg) {
+      toast('Offline mode is not set up on this device');
+      return;
+    }
+    toast('Checking…');
+    try {
+      await reg.update();
+    } catch {
+      toast('Could not reach the server');
+      return;
+    }
+    setTimeout(() => {
+      // A new version takes over on its own; the app reloads when it does.
+      toast(reg.installing || reg.waiting ? 'Update found, installing…' : 'You have the latest version');
+    }, 1200);
+  };
+
   el.append(
     h('div', { class: 'view-head' }, h('h1', {}, 'Settings')),
     h('section', { class: 'card stack' },
@@ -75,29 +103,8 @@ export async function settingsView(el, ctx) {
         h('button', { class: 'btn', onclick: () => fileInput.click() }, 'Import backup')),
       fileInput),
     h('section', { class: 'card stack' },
-      h('h2', { class: 'card-title' }, 'Offline & storage'),
-      h('p', { class: 'muted small' }, installed
-        ? 'Installed. The app works without internet.'
-        : 'Install the app to use it offline: on iPhone, tap Share → Add to Home Screen. On Android, open the ⋮ menu → Install app.'),
-      h('div', { class: 'setting-row' },
-        h('div', {},
-          h('div', { class: 'setting-label' }, `Version ${appVersion}`),
-          h('div', { class: 'muted small' }, 'Updates install when you open the app online.')),
-        h('button', {
-          class: 'btn',
-          onclick: async () => {
-            const reg = await navigator.serviceWorker?.getRegistration();
-            if (!reg) {
-              toast('Offline mode not set up on this device');
-              return;
-            }
-            toast('Checking for updates…');
-            await reg.update();
-            setTimeout(() => location.reload(), 1500);
-          },
-        }, 'Check')),
-      h('p', { class: 'muted small' }, persisted
-        ? 'Storage is protected. The browser won\'t clear your data on its own.'
-        : 'Storage isn\'t marked as protected yet. Installing the app helps keep your data safe.')),
+      h('button', { class: 'btn btn-primary btn-block', onclick: update }, 'Update'),
+      h('button', { class: 'btn btn-block', onclick: checkForUpdates }, 'Check for updates'),
+      h('button', { class: 'btn btn-block', onclick: () => shareApp() }, 'Share')),
   );
 }

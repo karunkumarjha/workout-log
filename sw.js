@@ -1,5 +1,5 @@
 // Offline support: serve from cache immediately, refresh the cache in the background.
-const CACHE = 'workout-log-v15';
+const CACHE = 'workout-log-v16';
 const FILES = [
   './',
   './index.html',
